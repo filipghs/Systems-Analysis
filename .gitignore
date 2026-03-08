@@ -1,0 +1,21 @@
+# Raw data - no subir por Ley 1581
+data/raw/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.env
+
+# LaTeX compilación
+*.aux
+*.log
+*.out
+*.toc
+*.synctex.gz
+*.fls
+*.fdb_latexmk
+
+# OS
+.DS_Store
+Thumbs.db
