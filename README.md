@@ -26,9 +26,6 @@ sasc-taller01/
 │   ├── survey_table.png           # Raw student survey data (n=20)
 │   ├── survey_chart.png           # Chart: proportion of reported incidents
 │   └── observation_table.png      # Direct observation record (8 sessions)
-├── experiments/
-│   ├── analisis_sensibilidad.py   # Parameter sensitivity model
-│   └── analisis_logs.py           # CampusSafe v0.3 log analysis
 ├── requirements.txt               # Python dependencies
 └── README.md                      # This file
 ```
@@ -53,12 +50,12 @@ sasc-taller01/
 
 Six methods were used simultaneously to build a complete picture of the problem:
 
-- 🗣️ **Interviews** — 5 security staff and 2 administrative staff
-- 📋 **Survey** — 20 students (Google Forms)
-- 👁️ **Direct observation** — 4 campus zones, 8 sessions
-- 📄 **Document analysis** — Institutional incident reports
-- 🔍 **Benchmarking** — 3 security alert platforms in Bogotá
-- 🌧️ **Weather monitoring** — Teusaquillo locality, 1 week
+- **Interviews** — 5 security staff and 2 administrative staff
+- **Survey** — 20 students (Google Forms)
+- **Direct observation** — 4 campus zones, 8 sessions
+- **Document analysis** — Institutional incident reports
+- **Benchmarking** — 3 security alert platforms in Bogotá
+- **Weather monitoring** — Teusaquillo locality, 1 week
 
 ---
 
