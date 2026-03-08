@@ -1,4 +1,4 @@
-# 🔐 Community Security Alert System (CSAS)
+#  Community Security Alert System (CSAS)
 
 **Systems Analysis and Design — Workshop No. 1**  
 Universidad Distrital Francisco José de Caldas · Semester 2026-I
