@@ -110,10 +110,10 @@ and geofenced alert dispatch targeting a response time reduction from 11.4 min t
 ### Deliverables
 | Deliverable | Link |
 |---|---|
-| System Design Document | [PDF](./Workshop_2_Design/CSAS_W2_final.pdf) |
-| LaTeX Source | [.tex](./Workshop_2_Design/CSAS_W2_final.tex) |
-| Architecture Diagram | [PNG](./Workshop_2_Design/diagrams/fig1_architecture.png) |
-| Process Flow Diagram | [PNG](./Workshop_2_Design/diagrams/fig2_processflow.png) |
+| System Design Document |
+| LaTeX Source |
+| Architecture Diagram |
+| Process Flow Diagram |
 ```
 
 4. Mensaje de commit:
