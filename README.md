@@ -83,7 +83,7 @@ The main file is written in LaTeX using IEEE formatting. The easiest way is thro
 
 | Name |
 |---|---|
-| [Gabriela Mateo Cusba Marin - 20251020128] |
+| [Gabriel Mateo Cusba Marin - 20251020128] |
 | [Henry Samuel Garrido Medina -20251020125] |
 | [Felipe Jose Garzon Herrera -20251020132] |
 | [Quintero Gordillo Juan Esteban –20251020137 ] |
