@@ -89,6 +89,36 @@ The main file is written in LaTeX using IEEE formatting. The easiest way is thro
 | [Quintero Gordillo Juan Esteban –20251020137 ] |
 
 ---
+---
+
+## Workshop No. 2 — Systems Design
+
+**System:** Community Security Alert System (CSAS)  
+**Semester:** 2026-I
+
+### Overview
+Complete systems design for the CSAS platform based on Workshop No. 1 findings.
+Microservices-based, event-driven architecture with hybrid verification pipeline
+and geofenced alert dispatch targeting a response time reduction from 11.4 min to under 5 min.
+
+### Key Design Decisions
+- Microservices-based, event-driven architecture
+- Adaptive verification engine with zone and time weighting
+- Mobile-first reporting interface (≤ 3 taps to submit)
+- Complementary integration with existing SIURE UD system
+
+### Deliverables
+| Deliverable | Link |
+|---|---|
+| System Design Document | [PDF](./Workshop_2_Design/CSAS_W2_final.pdf) |
+| LaTeX Source | [.tex](./Workshop_2_Design/CSAS_W2_final.tex) |
+| Architecture Diagram | [PNG](./Workshop_2_Design/diagrams/fig1_architecture.png) |
+| Process Flow Diagram | [PNG](./Workshop_2_Design/diagrams/fig2_processflow.png) |
+```
+
+4. Mensaje de commit:
+```
+Update README with Workshop 2 section and deliverable links
 
 ## Course Info
 
