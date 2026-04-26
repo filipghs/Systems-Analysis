@@ -1,0 +1,11 @@
+ID,Risk,Category,Probability,Impact,Level,Mitigation,Contingency,Monitoring,Quality Attribute
+R1,System overload,Technical,High,High,Critical,Kubernetes auto-scaling; priority queues,Scale services manually; shed non-critical traffic,Prometheus + Grafana alerts on request latency,Scalability
+R2,Notification failure,Technical,Medium,High,High,SMS + Push redundancy; DLQ retry strategy,Switch to surviving channel; replay from DLQ,Provider health checks every 30 s,Reliability
+R3,False reports,Security,High,Medium,High,Heuristic verification; user reputation scoring,Hold suspicious alerts for human review,False-positive rate dashboard,Integrity
+R4,Data breach,Security,Low,Critical,High,"TLS 1.3, AES-256 at rest, RBAC, audit logging",Rotate credentials; isolate service; legal notification within 72h,SIEM with anomaly detection,Security
+R5,Low adoption,Operational,Medium,High,High,Usability improvements; onboarding campaigns,Targeted communications; ambassadors program,Monthly active users dashboard,Usability
+R6,Connectivity issues,Operational,High,Medium,High,SMS / USSD fallback channel,Route all alerts through SMS provider,Coverage map and dropped-message metrics,Availability
+R7,Integration failure (3rd-party),Technical,Medium,High,High,API redundancy; circuit breakers,Failover to secondary provider,Provider status APIs and synthetic checks,Reliability
+R8,Slow authority response,Operational,Medium,High,High,Escalation protocols; SLA agreements,Auto-escalate to next responder tier,Authority response time tracking,Performance
+R9,Poor UX,Project,Medium,Medium,Medium,UX testing; iterative design reviews,Hot-fix releases; usability sprints,User satisfaction surveys; funnel analytics,Usability
+R10,Database failure,Technical,Low,Critical,High,Primary--standby replication; daily backups,Promote standby; restore from backup,Replication lag and backup-success alerts,Reliability
