@@ -17,15 +17,16 @@ This repository contains all four workshops of the course, covering the full sys
 
 ```
 Systems-Analysis/
-├── docs/
-│   └── workshop1_complete.tex          # W1 main document (LaTeX, IEEE format)
-├── diagrams/
-│   ├── context_diagram.png             # System context diagram
-│   └── relationship_map.png            # Component relationship map
-├── data/
-│   ├── survey_table.png                # Raw student survey data (n=20)
-│   ├── survey_chart.png                # Chart: proportion of reported incidents
-│   └── observation_table.png           # Direct observation record (8 sessions)
+├── Workshop_1/
+│   ├── docs/
+│   │   └── workshop1_complete.tex      # W1 main document (LaTeX, IEEE format)
+│   ├── diagrams/
+│   │   ├── context_diagram.png         # System context diagram
+│   │   └── relationship_map.png        # Component relationship map
+│   └── data/
+│       ├── survey_table.png            # Raw student survey data (n=20)
+│       ├── survey_chart.png            # Chart: proportion of reported incidents
+│       └── observation_table.png       # Direct observation record (8 sessions)
 ├── Workshop_3_Management/
 │   ├── docs/                           # W3 PDF report + LaTeX source
 │   ├── diagrams/                       # Architecture, Gantt, risk heatmap (6 PNGs)
@@ -102,8 +103,8 @@ Six methods were used simultaneously to build a complete picture of the problem:
 The main file is written in LaTeX using IEEE formatting. The easiest way is through **Overleaf**:
 
 1. Go to [overleaf.com](https://overleaf.com) → New Project → Blank Project
-2. Paste the contents of `docs/workshop1_complete.tex` into `main.tex`
-3. Upload all images from `/diagrams/` and `/data/` to the same project folder
+2. Paste the contents of `Workshop_1/docs/workshop1_complete.tex` into `main.tex`
+3. Upload all images from `Workshop_1/diagrams/` and `Workshop_1/data/` to the same project folder
 4. Set compiler to **pdfLaTeX** → Recompile
 
 ---
