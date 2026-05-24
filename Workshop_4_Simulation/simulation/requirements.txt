@@ -1,0 +1,7 @@
+# CSAS Workshop 4 — Python dependencies
+# Install with: python -m pip install -r requirements.txt
+
+simpy>=4.1.1        # Discrete Event Simulation (W4_DES.py)
+numpy>=1.24.0       # Numerical computing
+matplotlib>=3.7.0   # Result visualizations
+scipy>=1.10.0       # Statistical validation (optional)

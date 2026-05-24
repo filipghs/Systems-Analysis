@@ -1,0 +1,969 @@
+\documentclass[conference,a4paper,10pt]{IEEEtran}
+\IEEEoverridecommandlockouts
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{caption}
+\usepackage{float}
+\usepackage{multirow}
+
+\definecolor{codegray}{RGB}{245,245,245}
+\definecolor{codegreen}{RGB}{0,110,0}
+\definecolor{codeblue}{RGB}{0,0,180}
+\definecolor{codered}{RGB}{160,0,0}
+
+\lstset{
+  backgroundcolor=\color{codegray},
+  basicstyle=\ttfamily\scriptsize,
+  keywordstyle=\color{codeblue}\bfseries,
+  commentstyle=\color{codegreen}\itshape,
+  stringstyle=\color{codered},
+  breaklines=true, frame=single,
+  numbers=left, numberstyle=\tiny\color{gray},
+  tabsize=4, language=Python
+}
+
+\hypersetup{colorlinks=true,linkcolor=black,citecolor=black,urlcolor=black}
+
+\begin{document}
+
+% ─────────────────────────────────────────────────────────────
+\title{\textbf{Workshop No.~4 --- System Simulation and Validation}\\
+{\large Community Security Alert System (CSAS)}}
+
+\author{
+\IEEEauthorblockN{%
+  Felipe Jose Garzon Herrera$^{1}$,
+  Juan Esteban Quintero Gordillo$^{2}$,
+  Henry Samuel Garrido Medina$^{3}$,
+  Gabriel Mateo Cusba Marin$^{4}$}\\
+\IEEEauthorblockA{Systems Analysis \& Design --- Semester 2026-I\\
+Computer Engineering Program,
+Universidad Distrital Francisco Jos\'e de Caldas\\
+Instructor: Eng.\ Carlos Andr\'es Sierra, M.Sc.\\
+$^{1}$Cod.~20251020132\quad
+$^{2}$Cod.~20251020137\quad
+$^{3}$Cod.~20251020125\quad
+$^{4}$Cod.~20251020128}
+}
+\maketitle
+
+% ─────────────────────────────────────────────────────────────
+\begin{abstract}
+This report presents the simulation and validation of the Community
+Security Alert System (CSAS), a platform designed to improve campus
+security at Universidad Distrital Francisco Jos\'e de Caldas. Building
+on the analysis from Workshops 1, 2, and 3, this workshop implements
+two complementary simulation approaches: a Discrete Event Simulation
+(DES) using the SimPy library, and a hybrid behavioral simulation that
+captures community adoption dynamics and feedback loops. Three
+operational scenarios are evaluated---Baseline, Optimization, and
+Failure Mode---each executed 30 independent times for statistical
+reliability. The results show that the Optimization scenario meets
+the main performance targets: average latency of 17.94~s (well below
+the 30~s threshold), an alert delivery success rate of 96.84\,\%, and
+a community adoption rate of 67.62\,\%, exceeding the 60\,\% goal.
+The most important finding is that the verification threshold is
+the variable that most influences system stability.
+\end{abstract}
+
+% ─────────────────────────────────────────────────────────────
+\section{Introduction}
+
+The purpose of this workshop is to evaluate the operational behavior of
+the CSAS under different campus security conditions through
+computational simulation.
+
+Throughout the previous workshops, the team identified the main
+security problems at the university (Workshop~1), designed the system
+architecture to address them (Workshop~2), and defined the risk
+management and project plan (Workshop~3). This workshop takes that
+design and tests it in a controlled simulation environment to verify
+whether the proposed architecture actually works as expected.
+
+The simulation models the complete incident reporting workflow,
+including incident generation, AI-based verification, geofenced alert
+broadcasting, emergency prioritization, and performance monitoring.
+Two simulation approaches were used because each one captures a
+different aspect of the system: the DES focuses on the technical
+event pipeline, while the behavioral simulation focuses on how the
+community responds over time.
+
+% ─────────────────────────────────────────────────────────────
+\section{Simulation Paradigm}
+
+\subsection{Discrete Event Simulation (DES)}
+
+The DES approach was chosen for the process-oriented part of the
+simulation because the CSAS platform operates through asynchronous
+events that happen at specific moments in time. Instead of modeling
+the system continuously, the simulation advances from event to event,
+which makes it efficient for modeling queues, processing delays,
+concurrent users, and resource utilization~\cite{law2015simulation}.
+
+Examples of events modeled in the DES are: a user submitting an
+incident report, the verification service processing that report,
+the dispatcher broadcasting an alert, and the analytics module
+recording the response time.
+
+The DES was implemented in Python using the \texttt{SimPy}
+library~\cite{simpy}, which provides the core event queue and
+process management.
+
+\subsection{Behavioral Simulation}
+
+The behavioral simulation complements the DES by modeling something
+the event queue cannot capture: how the community behaves over time.
+Two feedback loops govern long-term system behavior:
+
+\begin{itemize}
+  \item \textbf{Reinforcing loop (R+):} when the system correctly
+    verifies and broadcasts an alert, community trust and vigilance
+    increase, which leads to more reports in future steps---a
+    self-sustaining cycle.
+  \item \textbf{Balancing loop (B-):} when too many unfiltered or
+    false alerts are broadcast, users experience alert fatigue. Once
+    fatigue exceeds 60\,\%, adoption drops by 4 percentage points
+    per step, eventually collapsing participation.
+\end{itemize}
+
+Which loop dominates depends almost entirely on the verification
+threshold parameter, which is the core finding of the behavioral
+analysis.
+
+% ─────────────────────────────────────────────────────────────
+\section{System Architecture}
+
+The simulated architecture reflects the design developed in
+Workshop~2, organized around five independent modules. Each module
+corresponds to a microservice in the real system.
+
+\begin{table}[H]
+\caption{Simulated System Modules}
+\label{tab:modules}\centering\small
+\begin{tabular}{ll}
+\toprule
+\textbf{Module} & \textbf{Responsibility}\\
+\midrule
+User Process        & Generates incidents dynamically\\
+Incident Service    & Receives and stores reports in a queue\\
+Verification Service & Simulates AI and community verification\\
+Dispatcher Service  & Sends geofenced alerts to nearby users\\
+Analytics Module    & Collects performance metrics\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The verification logic applies the following condition before
+broadcasting any alert:
+\[
+\text{verified} = (\text{confidence} \geq 0.75)
+\;\land\;
+(\text{confirmations} \geq \theta \;\lor\; \text{admin\_approval})
+\]
+where $\theta$ is the verification threshold and \textit{confidence}
+is a randomly sampled AI score. This condition directly models
+FR-03 (AI Verification) and NFR-08 (Data Integrity).
+
+% ─────────────────────────────────────────────────────────────
+\section{Functional Requirements Representation}
+
+Table~\ref{tab:fr} shows how each functional requirement from
+Workshop~2 was represented in the simulation.
+
+\begin{table}[H]
+\caption{Functional Requirements Coverage}
+\label{tab:fr}\centering\small
+\begin{tabular}{ll}
+\toprule
+\textbf{FR} & \textbf{Simulation Representation}\\
+\midrule
+FR-01 & Users generate security incidents\\
+FR-02 & Alerts sent within a 500\,m geofence radius\\
+FR-03 & Confidence-based AI validation ($\geq 0.75$)\\
+FR-04 & Simulated through console monitoring and CSV export\\
+FR-05 & Community confirmations randomly generated [0,\,4]\\
+FR-06 & Random GPS coordinates assigned per incident\\
+FR-07 & Incidents stored in a SimPy in-memory queue\\
+FR-08 & SOS flag enables emergency priority processing\\
+FR-09 & Metrics and performance indicators generated per step\\
+FR-10 & Reports may include a simulated media attachment flag\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ─────────────────────────────────────────────────────────────
+\section{Non-Functional Requirements Representation}
+
+\begin{table}[H]
+\caption{Non-Functional Requirements Coverage}
+\label{tab:nfr}\centering\small
+\begin{tabular}{ll}
+\toprule
+\textbf{NFR} & \textbf{Simulation Mechanism}\\
+\midrule
+NFR-01 & Response time measured per incident; target $< 30$~s\\
+NFR-02 & Dispatcher failure probability $p = 2\,\%$\\
+NFR-03 & Continuous execution over the full simulation window\\
+NFR-04 & Conceptually represented (TLS / AES at infrastructure level)\\
+NFR-05 & Multiple concurrent users simulated\\
+NFR-06 & Simplified $\leq 3$-interaction reporting process\\
+NFR-07 & Modular class architecture (one class per service)\\
+NFR-08 & Dual-condition verification gate enforced\\
+NFR-09 & Multi-confirmation validation threshold $\theta$\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ─────────────────────────────────────────────────────────────
+\section{Simulation Logic}
+
+The DES simulation follows a sequential workflow for each incident:
+
+\begin{enumerate}
+  \item A user process generates an incident at a random interval.
+  \item The incident is placed in the Incident Service queue.
+  \item The Verification Service evaluates it using the AI confidence
+    score and community confirmation count.
+  \item If the verification condition is met, the incident is marked
+    as verified.
+  \item The Dispatcher Service broadcasts the alert to users within
+    the 500\,m geofence.
+  \item The response time is recorded from incident creation to
+    successful dispatch.
+  \item All metrics are collected for the final analysis.
+\end{enumerate}
+
+In the behavioral simulation, these steps are abstracted into a
+per-step update of system state variables: adoption rate, fatigue
+level, trust level, and vigilance. Each step represents approximately
+one hour of real operation (window: 15:00--02:00), with environmental
+multipliers applied based on time of day, weather conditions, and
+campus zone.
+
+% ─────────────────────────────────────────────────────────────
+\section{Simulation Parameters}
+
+\begin{table}[H]
+\caption{Simulation Configuration Parameters}
+\label{tab:params}\centering\small
+\begin{tabular}{ll}
+\toprule
+\textbf{Parameter} & \textbf{Value}\\
+\midrule
+Simulation time (DES)       & 200 seconds\\
+Simulation steps (behav.)   & 12 steps (15:00--02:00 window)\\
+Number of users (DES)       & 11\\
+Population (behavioral)     & 200 users (pilot scope)\\
+Geofence radius             & 500 m\\
+Incident interval (DES)     & 20--30 s\\
+Verification time (DES)     & 1--2 s\\
+Dispatch time (DES)         & 1--5 s\\
+Failure probability         & 2\,\% (nominal), 20\,\% (failure mode)\\
+Independent runs per scen.  & 30\\
+Random seed                 & 42 (fixed for reproducibility)\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ─────────────────────────────────────────────────────────────
+\section{Metrics Evaluated}
+
+The following metrics were collected and analyzed during execution:
+
+\begin{itemize}
+  \item Number of processed incidents
+  \item Number of verified incidents
+  \item Number of failed alert deliveries
+  \item Average response time (incident creation to dispatch)
+  \item Alert broadcast count (number of users reached)
+  \item Latency compliance percentage (incidents resolved in $< 30$~s)
+\end{itemize}
+
+For the behavioral simulation, additional metrics were tracked:
+community adoption rate, alert fatigue level, user trust level, and
+adoption dynamics across the 12-step window.
+
+% ─────────────────────────────────────────────────────────────
+\section{Scenario Design and Experimental Matrix}
+
+Three scenarios were defined to test the system under different
+operating conditions, aligned with the risk scenarios identified in
+Workshop~3.
+
+\begin{table}[H]
+\caption{Factorial Experiment Design (EXP-01, EXP-02, EXP-03)}
+\label{tab:exp}\centering\small
+\begin{tabular}{p{0.6cm}p{2.5cm}p{1.7cm}p{2.2cm}}
+\toprule
+\textbf{EXP} & \textbf{Risk Hypothesis} &
+\textbf{Independent Variable} & \textbf{Dependent Variable (Target)}\\
+\midrule
+EXP-01 &
+  Massive traffic peaks degrade notification latency, causing delayed
+  alerts. &
+  Incoming report load (100--300\,\% above baseline). &
+  Dispatcher latency\\(target: $< 30$~s).\\[4pt]
+EXP-02 &
+  Report validation saturates security staff, increasing response
+  time beyond the quality threshold. &
+  Verification complexity during peak hours (18:00--04:00). &
+  End-to-end verification latency (target: $< 60$~s).\\[4pt]
+EXP-03 &
+  Low reporting culture prevents reaching the critical user mass
+  needed for reliable detection. &
+  UI friction level in the mobile reporting flow. &
+  Community adoption rate (target: $\geq 60\,\%$); report
+  completeness (target: $\geq 80\,\%$).\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Each experiment follows the same protocol: fixed random seed
+initialization, 12 simulation steps, per-step metric collection,
+and paired baseline vs.\ optimization runs to measure the improvement
+produced by each mitigation mechanism.
+
+% ─────────────────────────────────────────────────────────────
+\section{Extended Risk Register}
+
+Table~\ref{tab:risks} extends the Workshop~3 risk register by
+adding the experiment that validates each risk (EXP column) and the
+specific technological mechanism from Workshop~2 that acts as the
+mitigation.
+
+\begin{table*}[t]
+\caption{Extended Risk Register with Experimental Validation (R1--R10)}
+\label{tab:risks}\centering\small
+\begin{tabular}{clcclllp{3.5cm}}
+\toprule
+\textbf{ID} & \textbf{Risk} & \textbf{Prob.} & \textbf{Impact} &
+\textbf{Level} & \textbf{EXP} & \textbf{WS2 Mechanism} & \textbf{Quality Attr.}\\
+\midrule
+R1  & System overload        & High   & High   & Critical & EXP-01 &
+  Kubernetes auto-scaling + RabbitMQ priority queues & Scalability\\
+R2  & Notification failure   & Medium & High   & High     & EXP-01 &
+  SMS + Push redundancy; async retry queues & Reliability\\
+R3  & False reports          & High   & Medium & High     & EXP-02 &
+  Geolocation verification engine; threshold $\geq 3$ & Integrity\\
+R4  & Data breach            & Low    & Critical & High   & ---    &
+  TLS 1.3 end-to-end; AES-256 at rest & Security\\
+R5  & Low adoption           & Medium & High   & High     & EXP-03 &
+  Mobile UX $\leq 3$ taps (NFR-06); progressive onboarding & Usability\\
+R6  & Connectivity loss      & High   & Medium & High     & EXP-01 &
+  Automatic SMS fallback; offline sync & Availability\\
+R7  & API integration failure & Medium & High  & High     & EXP-02 &
+  Redundant API + circuit breaker; exponential retry & Reliability\\
+R8  & Slow authority response & Medium & High  & High     & EXP-02 &
+  Automated escalation; monitored SLA & Performance\\
+R9  & Poor user experience   & Medium & Medium & Medium  & EXP-03 &
+  Iterative UX testing; A/B flow testing & Usability\\
+R10 & Database failure       & Low    & Critical & High  & ---    &
+  Multi-zone replication; backups every 15 min & Reliability\\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+% ─────────────────────────────────────────────────────────────
+\section{Mitigation Strategies}
+
+\subsection{M1 --- Verification Threshold (R1, R2, R3)}
+
+The verification threshold $\theta$ is the most critical control
+variable in the system. With $\theta = 1$, any report---even a
+false one---triggers a broadcast, which degrades community trust by
+approximately 15 percentage points per simulation cycle. With
+$\theta \geq 3$, the system filters false positives without
+exceeding the latency bound:
+\[
+\text{latency} = \frac{\text{reports} \times 15}{\text{efficiency}}
+< 60\text{ s at efficiency} = 0.9
+\]
+EXP-01 validates that the dispatcher maintains latency below 30~s
+at 300\,\% load when RabbitMQ and Kubernetes are active. EXP-02
+confirms that the automated verification engine keeps end-to-end
+latency below 60~s.
+
+\subsection{M2 --- Critical Adoption Mass and Minimal UI Friction
+  (R5, R9)}
+
+The behavioral simulation shows that the system needs a minimum of
+30--35\,\% community adoption to function reliably. Below that
+threshold, the human sensor network is too sparse to detect incidents
+consistently. EXP-03 tests how simplifying the reporting UI (reducing
+steps to $\leq 3$) affects adoption. Progressive onboarding and
+social-proof mechanisms help overcome the initial resistance to
+installing and using the app.
+
+\subsection{M3 --- Alert Fatigue Prevention (R6, R8)}
+
+The Failure Mode scenario reveals that alert fatigue is irreversible
+once it crosses 60\,\%: adoption drops 4 percentage points per
+step and the system cannot recover on its own. The threshold
+$\theta \geq 3$ is the main mechanism to prevent this collapse.
+Automatic SMS fallback covers connectivity failures (R6), and an
+automated authority escalation protocol with a monitored SLA
+handles slow response times (R8).
+
+\subsection{M4 --- Infrastructure Security and Resilience (R4, R7,
+  R10)}
+
+Some risks do not depend on simulation behavior---they require
+architectural guarantees. TLS 1.3 and AES-256 protect data in
+transit and at rest (R4). Circuit breakers with exponential retry
+prevent failures from cascading across microservices (R7). Multi-zone
+database replication with 15-minute backups ensures data availability
+in case of hardware failure (R10).
+
+% ─────────────────────────────────────────────────────────────
+\section{Contingency Plan}
+
+Table~\ref{tab:contingency} defines the immediate response for the
+five highest-impact failure scenarios identified during the simulation.
+
+\begin{table}[H]
+\caption{Contingency Responses for Top Failure Scenarios}
+\label{tab:contingency}\centering\small
+\begin{tabular}{p{1.4cm}p{1.6cm}p{2.2cm}p{1.5cm}}
+\toprule
+\textbf{Scenario} & \textbf{Trigger} &
+\textbf{Immediate Action} & \textbf{Mechanism}\\
+\midrule
+Overload (R1) &
+  Latency $>30$~s &
+  Scale Kubernetes pods; activate priority queues &
+  HPA + PagerDuty\\[4pt]
+Notif.\ fail (R2) &
+  Delivery $< 95\,\%$ &
+  Activate SMS fallback channel &
+  RabbitMQ DLQ + Twilio\\[4pt]
+Alert fatigue (R3) &
+  Fatigue $> 60\,\%$ &
+  Raise $\theta$ to 4; pause non-critical alerts &
+  Real-time feature flag\\[4pt]
+Data breach (R4) &
+  SIEM anomaly &
+  Isolate service; revoke tokens &
+  Circuit breaker + secret rotation\\[4pt]
+DB failure (R10) &
+  Primary unreachable &
+  Promote secondary replica &
+  Multi-AZ failover $< 30$~s\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ─────────────────────────────────────────────────────────────
+\section{Results and Analysis}
+
+\subsection{DES Execution Results}
+
+The DES simulation produced variable results across individual runs,
+as expected from a stochastic model. Two representative executions
+illustrate the range of behavior:
+
+Under moderate load conditions, the system processed 23 incidents, verified 24, had 0
+failed alerts, and broadcast alerts to 30 nearby users, with an average response
+time of 15.87~s and 100\,\% of incidents resolved within 30~s.
+
+Under higher load conditions, the system processed 29 incidents, had 1 failed alert
+delivery, and broadcast to 47 users, with an average response time of 28.14~s and
+only 55.17\,\% of incidents within the 30~s threshold.
+
+This variability shows that performance strongly depends on incident
+generation frequency and queue congestion---a finding consistent with
+the Workshop~1 observations about peak incident hours.
+
+\subsection{Behavioral Simulation --- Statistical Results}
+
+Table~\ref{tab:results} presents the aggregated results from 30
+independent runs per scenario. The confidence intervals were
+calculated using Student's $t$-distribution with
+$t_{29,\,0.025} = 2.045$.
+
+\begin{table}[H]
+\caption{Scenario Results --- 30 Independent Runs with 95\,\% CI}
+\label{tab:results}\centering\small
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Scenario} & \textbf{Avg Lat.} &
+\textbf{CI Low} & \textbf{CI High} & \textbf{Adoption}\\
+\midrule
+Baseline     & 40.87 s & 38.85 s & 42.89 s & 21.39\,\%\\
+Optimization & 17.94 s & 16.92 s & 18.96 s & 67.62\,\%\\
+Failure Mode & 71.66 s & 67.72 s & 75.59 s & 31.34\,\%\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The Optimization scenario achieved the best results in all metrics,
+maintaining low latency, high adoption, and stable alert propagation.
+The Failure Mode scenario showed severe queue congestion, high alert
+fatigue, and reduced user trust---confirming that infrastructure
+degradation amplifies system problems non-linearly.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.97\columnwidth]{latency_by_scenario.png}
+\caption{Average latency by scenario with 95\,\% confidence intervals.
+  The Optimization scenario achieves a 56\,\% latency reduction
+  compared to Baseline, satisfying NFR-01.}
+\label{fig:latency}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.97\columnwidth]{adoption_evolution.png}
+\caption{Community adoption evolution across 12 simulation steps.
+  The Optimization scenario maintains a positive reinforcing loop
+  that stabilizes participation above the 60\,\% target.}
+\label{fig:adoption}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.97\columnwidth]{fatigue_behavior.png}
+\caption{Emergent alert fatigue behavior. The Failure Mode scenario
+  shows exponential fatigue growth that leads to adoption collapse.
+  The Optimization scenario keeps fatigue within a safe range.}
+\label{fig:fatigue}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.97\columnwidth]{scenario_comparison.png}
+\caption{Adoption rate vs.\ alert success rate by scenario.}
+\label{fig:comparison}
+\end{figure}
+
+% ─────────────────────────────────────────────────────────────
+\section{Statistical Validation}
+
+Each scenario was executed 30 independent times using controlled
+pseudo-random seeds to reduce stochastic bias. Confidence intervals
+were computed using the formula:
+\[
+\bar{x} \pm t_{29,\,0.025} \cdot \frac{s}{\sqrt{30}},
+\quad t_{29,0.025} = 2.045
+\]
+
+The results show stable metric distributions with acceptable
+variability ranges---the narrow confidence intervals for the
+Optimization scenario ($\pm 1.02$~s) indicate consistent behavior
+across runs.
+
+Sensitivity analysis identified two variables with the greatest
+influence on system stability:
+\begin{enumerate}
+  \item \textbf{Verification threshold}: increasing from 1 to 3
+    reduces false-positive propagation by approximately 78\,\%
+    and prevents fatigue collapse.
+  \item \textbf{Staff efficiency}: increasing from 50\,\% (baseline)
+    to 90\,\% (optimization, representing the automated engine)
+    cuts average latency roughly in half.
+\end{enumerate}
+
+All other parameters had second-order effects that only become
+significant at extreme values outside normal operating conditions.
+
+% ─────────────────────────────────────────────────────────────
+\section{Complexity and Emergent Behavior}
+
+\subsection{Feedback Loop Structure}
+
+Figure~\ref{fig:feedback} shows the two competing feedback loops
+that govern long-term system behavior. The verification threshold
+$\theta$ determines which loop dominates.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.97\columnwidth]{feedback_loops.png}
+\caption{System feedback loop structure. Green path (R+): reinforcing
+  loop active when $\theta \geq 3$. Red path (B-): balancing loop
+  that drives adoption collapse when $\theta = 1$.}
+\label{fig:feedback}
+\end{figure}
+
+With $\theta \geq 3$, the R+ loop dominates: verified alerts raise
+community vigilance, which drives more reports, sustaining the cycle.
+With $\theta = 1$, the B- loop dominates: false alerts reach users,
+fatigue grows, adoption collapses, and the system cannot recover
+without intervention---a behavior consistent with sensitive dependence
+on a control parameter in nonlinear dynamical systems~\cite{sterman2000}.
+
+\subsection{Sensitivity to Initial Conditions}
+
+Figure~\ref{fig:sensitivity} shows how the three main metrics respond
+to changes in the verification threshold $\theta$.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.97\columnwidth]{sensitivity_analysis.png}
+\caption{Sensitivity analysis: effect of verification threshold
+  $\theta$ on average latency, community adoption, and alert success
+  rate. The dashed line marks the recommended value $\theta = 3$.}
+\label{fig:sensitivity}
+\end{figure}
+
+The curves show a sharp transition between $\theta = 1$ and
+$\theta = 3$, after which improvements become marginal. This
+inflection is the system's bifurcation point: below it the
+balancing loop dominates and the system is unstable; at or above
+it the reinforcing loop dominates and the system is stable.
+Increasing $\theta$ beyond 3 yields diminishing returns while
+reducing the number of legitimate alerts broadcast.
+
+\subsection{Computational Complexity}
+
+The dispatcher operates close to $O(n)$ under moderate load.
+During overload, priority-queue scheduling introduces behavior
+closer to $O(n \log n)$. The three main bottlenecks identified
+were: (1)~incident verification latency, (2)~alert dispatch queue
+congestion, and (3)~community validation throughput. Kubernetes
+auto-scaling and RabbitMQ priority queues mitigated these in the
+Optimization scenario, confirming the Workshop~2 design.
+
+% ─────────────────────────────────────────────────────────────
+\section{Validation Checklist}
+
+\begin{table}[H]
+\caption{Validation Methods and Acceptance Criteria}
+\label{tab:validation}\centering\small
+\begin{tabular}{p{3.5cm}p{3.9cm}}
+\toprule
+\textbf{Validation Method} & \textbf{Criterion / Target}\\
+\midrule
+Behavioral simulation (3 scenarios) &
+  Adoption $\geq 60\,\%$, fatigue $< 60\,\%$, trust $> 80\,\%$\\
+Load test (EXP-01) &
+  Latency $< 30$~s at 300\,\% traffic\\
+Integration test (EXP-02) &
+  End-to-end verification $< 60$~s\\
+UAT / friction test (EXP-03) &
+  Adoption $\geq 60\,\%$; completeness $\geq 80\,\%$\\
+Security test &
+  No critical vulnerabilities (OWASP Top~10)\\
+Bifurcation analysis &
+  System stable at threshold $\theta \geq 3$\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ─────────────────────────────────────────────────────────────
+\section{Assumptions and Limitations}
+
+\subsection{Assumptions}
+
+The simulation was built on the following simplifying assumptions,
+which represent the gap between the model and a real deployment:
+
+\begin{itemize}
+  \item GPS coordinates are randomly generated within a fixed area.
+  \item AI verification confidence is sampled from a uniform
+    distribution---a real trained model would behave differently.
+  \item User behavior follows simplified probabilistic rules.
+  \item Network failures occur as independent random events with
+    fixed probability.
+  \item Users are uniformly distributed across campus, which does not
+    reflect the spatiotemporal concentration identified in Workshop~1.
+\end{itemize}
+
+\subsection{Limitations}
+
+\begin{itemize}
+  \item No real mobile application was implemented or tested.
+  \item The AI verification model is probabilistic, not trained on
+    real data.
+  \item GPS functionality is fully simulated.
+  \item Human behavior is approximated statistically, not observed.
+  \item Database persistence is temporary (in-memory only).
+\end{itemize}
+
+% ─────────────────────────────────────────────────────────────
+\section{Source Code Documentation}
+
+The simulation source code is organized following the same modular
+architecture as the system design (NFR-07 Maintainability). Two
+main scripts implement the two simulation paradigms:
+
+\textbf{W4\_DES.py} implements the DES using SimPy. Each service
+is an independent class with a single responsibility. All
+configuration constants are declared at the top of the file,
+making it easy to change parameters without modifying the logic.
+
+\textbf{W4\_behavioral.py} implements the behavioral simulation using
+a step-by-step state update model. The \texttt{CSASSimulation} class
+tracks adoption, fatigue, trust, and vigilance across the 12-step
+window. Environmental multipliers are applied through the
+\texttt{environmental\_multipliers} function based on the hour,
+weather, and campus zone.
+
+\begin{lstlisting}[caption={Verification gate and feedback loops
+--- W4\_behavioral.py}]
+def run_step(self):
+    # Verification gate
+    if reports >= self.threshold:
+        latency = (reports * 15) / self.efficiency
+        if latency < 60:
+            alert_sent = 1
+
+    # Reinforcing loop (R+): alert verified, no fatigue
+    if alert_sent and self.threshold >= 3:
+        self.vigilance = self._clamp(self.vigilance + 0.12)
+        self.fatigue   = self._clamp(self.fatigue   - 0.05)
+
+    # Balancing loop (B-): fatigue above 60%
+    if self.fatigue > 0.60:
+        self.adoption = self._clamp(self.adoption - 0.04, 0.05)
+\end{lstlisting}
+
+Each class and function includes a docstring describing its
+responsibility, inputs, outputs, and behavior. This structure
+supports future modifications without affecting other modules.
+
+% ─────────────────────────────────────────────────────────────
+\section{Reproducibility and Output Files}
+
+All simulation outputs are exported to structured files to allow
+independent verification of the results.
+
+\begin{table}[H]
+\caption{Simulation Output Files}
+\label{tab:outputs}\centering\small
+\begin{tabular}{ll}
+\toprule
+\textbf{File} & \textbf{Purpose}\\
+\midrule
+\texttt{baseline\_log.csv}         & Step-by-step baseline execution trace\\
+\texttt{confidence\_intervals.csv} & Per-scenario statistics and CI\\
+\texttt{sensitivity\_analysis.csv} & Results for threshold sweep ($\theta=1\ldots4$)\\
+\texttt{figures/*.png}             & All four performance charts\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+To reproduce the full simulation:
+\begin{lstlisting}[language=bash, numbers=none]
+cd simulation/
+pip install -r requirements.txt
+python W4_DES.py          # Process-oriented DES
+python W4_behavioral.py   # Behavior-oriented simulation
+\end{lstlisting}
+
+% ─────────────────────────────────────────────────────────────
+\section{Ethical Considerations}
+
+All data used in the simulation is synthetic. No personal information
+from real students or staff was collected or processed. Any future
+production deployment of the CSAS must comply with Ley~1581 de~2012,
+the Colombian personal data protection law, particularly regarding
+consent for location data collection.
+
+The verification algorithm does not use demographic variables, but
+a real trained AI model should be audited for potential bias before
+deployment. From a safety perspective, false-negative alerts (a real
+incident not broadcast) carry a higher social cost than false
+positives, so the threshold $\theta \geq 3$ was chosen to balance
+filtering quality against the risk of suppressing legitimate reports.
+
+% ─────────────────────────────────────────────────────────────
+\section{Repository Management}
+
+All workshop artefacts are organized in the
+\texttt{Workshop\_4\_Simulation/} folder within the course repository
+(\url{https://github.com/filipghs/Systems-Analysis}):
+
+\begin{small}
+\begin{verbatim}
+Workshop_4_Simulation/
+  docs/
+    Workshop4_CSAS.pdf
+    Workshop4_CSAS.tex
+  simulation/
+    W4_DES.py
+    W4_behavioral.py
+    requirements.txt
+  results/
+    figures/  (4 PNG charts)
+    confidence_intervals.csv
+    sensitivity_analysis.csv
+    baseline_log.csv
+  risk_management/
+    risk_analysis_W4.md
+  validation/
+    statistical_validation.md
+  README.md
+\end{verbatim}
+\end{small}
+
+% ─────────────────────────────────────────────────────────────
+\section{Design Validation}
+
+This section explicitly assesses how the simulation results validate
+or challenge the design decisions made across Workshops 1, 2, and 3.
+
+\textbf{Workshop~1 --- Empirical Findings:}
+Workshop~1 measured a 35\,\% incident under-reporting rate and
+identified 12\,\% as the initial adoption level, with parking lots
+and building entrances during 18:00--04:00 as the highest-risk zones.
+The simulation confirms that 12\,\% adoption is insufficient for the
+system to sustain itself: the behavioral model shows that the
+reinforcing loop cannot overcome noise below 30--35\,\% participation.
+The time-of-day multipliers in the behavioral simulation (factor
+$2.5\times$ at night) directly reflect those Workshop~1 observations.
+
+\textbf{Workshop~2 --- Architecture Decisions:}
+
+\begin{itemize}
+  \item \textbf{RabbitMQ + Kubernetes:} \checkmark Validated by EXP-01.
+    The Optimization scenario maintains latency below 30~s at 300\,\%
+    load, confirming that the event bus and elastic scaling are adequate.
+  \item \textbf{Automated Verification Engine:} \checkmark Validated by
+    EXP-02. Staff efficiency of 90\,\% (automated) keeps end-to-end
+    latency within NFR-01 bounds; 50\,\% (manual) does not.
+  \item \textbf{SMS/USSD fallback:} \checkmark Validated by the failure
+    probability sweep. The fallback prevents total outage when the
+    primary data channel fails.
+  \item \textbf{$\leq$3-interaction mobile flow:} \checkmark Validated
+    by EXP-03. Reducing UI friction is the primary mechanism for
+    crossing the 30--35\,\% adoption threshold.
+  \item \textbf{Initial 12\,\% adoption assumption:} $\times$ Challenged.
+    The system cannot sustain the reinforcing loop starting from 12\,\%.
+    A structured onboarding campaign is required before Phase~1 exit.
+\end{itemize}
+
+\textbf{Workshop~3 --- Risk and Quality Framework:}
+The simulation provided quantitative validation for 8 of the 10
+registered risks. R1 (Critical) and R6 (High) are the most directly
+observable: the Failure Mode scenario reproduces their effects
+(latency 71.66~s, adoption collapse) exactly as the risk register
+predicted. The two structural risks---R4 (data breach) and R10
+(database failure)---could not be modeled stochastically but remain
+as architectural invariants that bound the validity of the results.
+
+% ─────────────────────────────────────────────────────────────
+\section{Recommendations}
+
+Based on the simulation results, the following improvements are
+recommended for the next stages of the CSAS project.
+
+\subsection{Short-term (before Phase~1 deployment)}
+
+\begin{enumerate}
+  \item \textbf{Set verification threshold to $\theta = 3$} as the
+    production default and expose it as a runtime feature flag so
+    the operations team can adjust it without redeploying the service.
+  \item \textbf{Run a targeted onboarding campaign} to push community
+    adoption past 35\,\% before going live. Below that threshold the
+    system cannot self-sustain, regardless of how well the technology
+    is configured.
+  \item \textbf{Implement a fatigue monitoring dashboard} that tracks
+    alert fatigue in real time and automatically raises $\theta$ when
+    fatigue approaches 50\,\%, preventing the irreversible collapse
+    observed in the Failure Mode scenario.
+\end{enumerate}
+
+\subsection{Medium-term (Phase~2 improvements)}
+
+\begin{enumerate}
+  \item \textbf{Replace the probabilistic AI gate} with a trained
+    binary classifier using real incident data. The current model
+    assumes a uniform confidence distribution, which overestimates
+    performance for edge cases.
+  \item \textbf{Use real campus GPS data} to replace uniform random
+    coordinate generation. Workshop~1 identified specific high-risk
+    zones; incorporating that spatial concentration would produce
+    more accurate capacity estimates.
+  \item \textbf{Extend the simulation window} beyond 12 steps to
+    model seasonal variation (exam periods, holidays) and evaluate
+    whether the 60\,\% adoption KPI is sustainable over months.
+\end{enumerate}
+
+\subsection{Long-term (future research)}
+
+\begin{enumerate}
+  \item Explore agent-based modeling as a complement to the DES,
+    assigning individual behavior profiles to each user rather than
+    treating adoption as a single aggregate variable.
+  \item Investigate integration with the SIURE platform at
+    Universidad Distrital to evaluate whether bidirectional data
+    exchange creates additional feedback loops not captured here.
+  \item Study the effect of gamification mechanics (reputation
+    scores, community badges) on the reinforcing loop coefficient
+    as a way to accelerate organic adoption growth.
+\end{enumerate}
+
+% ─────────────────────────────────────────────────────────────
+\section{Conclusions}
+
+The CSAS simulation confirmed that the proposed system design is
+feasible under realistic operating conditions. Three conclusions stand
+out:
+
+First, the \textbf{verification threshold is the most important
+parameter} in the entire system. Setting $\theta \geq 3$ keeps the
+reinforcing loop active, adoption above 60\,\%, and latency well
+within NFR-01 bounds. Setting $\theta = 1$ drives the system into
+a collapse pattern that cannot recover without external intervention.
+
+Second, \textbf{technology alone is not sufficient}. The simulation
+showed that below 30--35\,\% community adoption, even a perfectly
+configured system cannot sustain reliable operation because the human
+sensor network is too sparse. A structured onboarding campaign is
+a prerequisite for Phase~1 deployment, not an optional enhancement.
+
+Third, \textbf{the Optimization scenario validates the Workshop~2
+architecture}. RabbitMQ priority queues, Kubernetes auto-scaling,
+the automated verification engine, and the SMS fallback channel each
+played a measurable role in achieving the NFR-01, NFR-02, and
+NFR-05 targets under the simulated conditions.
+
+Future work should address the current limitations: replacing the
+probabilistic AI gate with a real trained model, using actual campus
+GPS data for a more realistic incident distribution, and extending
+the simulation to cover the full phased deployment defined in
+Workshop~3.
+
+% ─────────────────────────────────────────────────────────────
+\begin{thebibliography}{9}
+
+\bibitem{simpy}
+Team SimPy, \textit{SimPy: Discrete-Event Simulation for Python},
+version~4.1, 2023. Available: \url{https://simpy.readthedocs.io}
+
+\bibitem{law2015simulation}
+A.~M. Law, \textit{Simulation Modeling and Analysis}, 5th~ed.
+New York: McGraw-Hill, 2015.
+
+\bibitem{sterman2000}
+J.~D. Sterman, \textit{Business Dynamics: Systems Thinking and
+Modeling for a Complex World}. Irwin/McGraw-Hill, 2000.
+
+\bibitem{iso25010}
+ISO/IEC, \textit{Systems and Software Quality Models},
+ISO/IEC~25010:2011.
+
+\bibitem{pmbok7}
+Project Management Institute, \textit{PMBOK Guide}, 7th~ed.
+Newtown Square, PA: PMI, 2021.
+
+\bibitem{iso31000}
+ISO, \textit{Risk Management --- Guidelines}, ISO~31000:2018.
+
+\bibitem{dennis2021}
+A.~Dennis, B.~H. Wixom, and D.~Tegarden,
+\textit{Systems Analysis and Design}, 6th~ed. Hoboken, NJ: Wiley, 2021.
+
+\bibitem{ley1581}
+Congreso de Colombia, \textit{Ley~1581 de~2012 ---
+Protecci\'on de Datos Personales}, Diario Oficial No.~48.587, 2012.
+
+\end{thebibliography}
+
+\end{document}

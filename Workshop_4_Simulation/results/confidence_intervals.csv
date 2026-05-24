@@ -1,0 +1,4 @@
+Scenario,Avg Latency (s),CI Lower,CI Upper,Avg Adoption (%),Alert Success Rate (%)
+Baseline,10.44,9.92,10.97,12.46,100.00
+Optimization,6.87,6.54,7.19,12.31,100.00
+Failure Mode,15.54,14.90,16.18,12.43,99.01
